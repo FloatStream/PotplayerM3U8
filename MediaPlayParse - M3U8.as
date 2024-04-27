@@ -37,18 +37,15 @@ string GetDesc()
 
 string USERAGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36";
 string HOMEURL;
-int RI=0,PG=1;
-bool isOnly = false;
+int RI, PG;
+bool isOnly;
 JsonReader JSON;
 array<string> URLLIST={
     "https://ikunzyapi.com/api.php/provide/vod",
     "https://www.feisuzyapi.com/api.php/provide/vod/",
-    "https://api.tiankongapi.com/api.php/provide/vod/",
+    "https://m3u8.tiankongapi.com/api.php/provide/vod/from/tkm3u8",
     "https://api.ukuapi.com/api.php/provide/vod/",
     "https://api.1080zyku.com/inc/apijson.php",
-    "https://api.tiankongapi.com/api.php/provide/vod/at/json/from/tkm3u8/",
-    "https://sdzyapi.com/api.php/provide/vod/",
-    "https://www.hongniuzy2.com/api.php/provide/vod/at/json/"
     };
 
 void getHomeURL(string name)
@@ -91,45 +88,47 @@ array<string> handelUrlStr(string url)
 
 bool PlaylistCheck(const string & in path)
 {
-    array < string > temp = path.split("#");
-    isOnly = false;
-    if(path.find("￥")==0||path.find("$")==0){
-        isOnly = true;
-    }
-    if(path.find("panvideo") == 0)
+    if(path.find("panvideo") == 0  or  path.find("://") >= 0 or path.find(":\\") >= 0)
     {
         return false;
     }
-    if (path.find(":") < 0 && temp.size() < 4) 
+
+    path.replace("?WithCaption", "");
+    array < string > temp = path.split("#");
+    if(temp.size() < 1 or temp.size() >= 3)
     {
-        if(temp.length()>1){
-            if(parseInt(temp[1])<100){
-                RI = parseInt(temp[1])-1;
-                PG = 1;
-            }
-            else{
-                RI = parseInt(temp[1])/100-1;
-                PG = parseInt(temp[1])%100;
-            }
-        }
-        string name = temp[0];
-        name.replace("$","");
-        name.replace("￥","");
-        getHomeURL(name);
-        return true;
+        return false;
     }
-    return false;
+    isOnly = false;
+    if(temp[0].find("￥") == 0 || temp[0].find("$") == 0) {
+        isOnly = true;
+    }
+    RI = 0;
+    PG = 1;
+    if(temp.size() > 1){
+        if(parseInt(temp[1])<100){
+            RI = parseInt(temp[1])-1;
+        }
+        else{
+            RI = parseInt(temp[1])/100-1;
+            PG = parseInt(temp[1])%100;
+        }
+    }
+    string name = temp[0].TrimLeft("$￥");
+    getHomeURL(name);
+    return true;
 }
 
 array < dictionary > PlaylistParse(const string & in path)
 {
     //HostOpenConsole();
+    path.replace("?WithCaption", "");
     array < dictionary > ret;
     string tempstr,ids,orign = path.split("#")[0];
     JsonValue Itemlist;
     JsonValue showList;
 
-    HostPrintUTF8(HOMEURL);
+    // HostPrintUTF8(HOMEURL);
     Itemlist = getPlayList();
     
     for (int i = 0; i < Itemlist.size(); i++) 
@@ -142,7 +141,7 @@ array < dictionary > PlaylistParse(const string & in path)
         string showName = showList[i]["vod_name"].asString();
         if(isOnly && ("$"+showName != orign && "￥"+showName != orign))
         {
-            HostPrintUTF8(showName);
+            // HostPrintUTF8(showName);
             continue;
         }
         array <string> showurl = handelUrlStr(showList[i]["vod_play_url"].asString());
